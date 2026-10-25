@@ -1,0 +1,48 @@
+name: Build ZernoOS
+
+on:
+  workflow_dispatch: # позволяет запускать сборку вручную кнопкой в GitHub
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y make wget cpio squashfs-tools genisoimage
+
+      - name: Clone tinycore-remaster tools
+        run: |
+          git clone https://github.com/jschlatow/tinycore-remaster.git tools
+          cd tools
+
+      - name: Create appliance config for ZernoOS
+        run: |
+          mkdir -p tools/appliances/zerno
+          cat > tools/appliances/zerno/iso.mk << 'EOF'
+          BASE_ISO       := Core-15.0.iso
+          CORE_GZ        := 15.x/tinycore.gz
+          APPS(DOWNLOAD) := 15.x/python3.9 \
+                            15.x/python3.9-dev \
+                            15.x/nano \
+                            15.x/openssh \
+                            15.x/chromium-browser
+          EOF
+
+      - name: Build ZernoOS ISO
+        run: |
+          cd tools
+          make app/zerno
+
+      - name: Upload ISO as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZernoOS-ISO
+          path: tools/build/zerno.iso
