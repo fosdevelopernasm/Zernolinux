@@ -1,7 +1,7 @@
 name: Build ZernoOS
 
 on:
-  workflow_dispatch: # позволяет запускать сборку вручную кнопкой в GitHub
+  workflow_dispatch:
   push:
     branches: [ main ]
 
@@ -23,18 +23,42 @@ jobs:
           git clone https://github.com/jschlatow/tinycore-remaster.git tools
           cd tools
 
-      - name: Create appliance config for ZernoOS
+      - name: Create appliance config and branding for ZernoOS
         run: |
           mkdir -p tools/appliances/zerno
+          mkdir -p tools/appliances/zerno/mydata/etc
+          mkdir -p tools/appliances/zerno/mydata/opt
+
+          # 1. Конфигурация пакетов (Tiny Core 17.x)
           cat > tools/appliances/zerno/iso.mk << 'EOF'
-          BASE_ISO       := Core-15.0.iso
-          CORE_GZ        := 15.x/tinycore.gz
-          APPS(DOWNLOAD) := 15.x/python3.9 \
-                            15.x/python3.9-dev \
-                            15.x/nano \
-                            15.x/openssh \
-                            15.x/chromium-browser
+          BASE_ISO       := Core-17.0.iso
+          CORE_GZ        := 17.x/tinycore.gz
+          APPS(DOWNLOAD) := 17.x/python3.14 \
+                            17.x/nano \
+                            17.x/vim \
+                            17.x/mc \
+                            17.x/openssh \
+                            17.x/htop \
+                            17.x/git \
+                            17.x/curl \
+                            17.x/wget
           EOF
+
+          # 2. Замена приветствия в консоли (motd)
+          cat > tools/appliances/zerno/mydata/etc/motd << 'EOF'
+          =========================================
+                   Добро пожаловать в ZernoOS
+              Легкая система на базе Tiny Core 17
+          =========================================
+          Python 3.14 | nano | vim | mc | git | htop
+          EOF
+
+          # 3. Установка имени хоста при загрузке
+          cat > tools/appliances/zerno/mydata/opt/bootlocal.sh << 'EOF'
+          #!/bin/sh
+          hostname ZernoOS
+          EOF
+          chmod +x tools/appliances/zerno/mydata/opt/bootlocal.sh
 
       - name: Build ZernoOS ISO
         run: |
